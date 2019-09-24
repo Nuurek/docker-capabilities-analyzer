@@ -1,3 +1,7 @@
+# build from source
+# go to bcc/build/src/python/bcc-python
+# pip install .
+
 # read the input
 # start the container
 # get container's pid and declared capabilities
@@ -8,6 +12,7 @@ import signal
 import uuid
 
 import docker
+from bcc import BPF
 from docker.models.containers import Container
 
 from capabilites import Capabilities, DEFAULT_CAPABILITIES
@@ -54,11 +59,25 @@ def clean_up():
     container.remove()
     print('Removed container')
 
+    exit()
+
 
 signal.signal(signal.SIGINT, signal_handler)
 signal.signal(signal.SIGINT, signal_handler)
 
-try:
-    container.wait()
-except KeyboardInterrupt:
-    clean_up()
+b = BPF(src_file='trace_capable.c')
+
+
+def print_event(_core, data, _size):
+    event = b["events"].event(data)
+    capability = Capabilities(event.cap)
+    print(event.pid, capability)
+
+
+b["events"].open_perf_buffer(print_event)
+
+while True:
+    try:
+        b.perf_buffer_poll()
+    except KeyboardInterrupt:
+        clean_up()
