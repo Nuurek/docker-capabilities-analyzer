@@ -13,11 +13,24 @@ class Parser:
             }
             setattr(namespace, self.dest, ports)
 
+    class VolumeAction(Action):
+        def __call__(self, parser: ArgumentParser, namespace: Namespace, value: str, option_string: str = None):
+            host_source, container_destination = value.split(':')
+            volumes: Dict[str, Dict[str, str]] = getattr(namespace, self.dest) or {}
+            volumes = {
+                **volumes,
+                host_source: {
+                    'bind': container_destination,
+                }
+            }
+            setattr(namespace, self.dest, volumes)
+
     _parser = ArgumentParser()
     _parser.add_argument('--cap-drop', action='append')
     _parser.add_argument('--cap-add', action='append')
     _parser.add_argument('--env', '-e', action='append')
     _parser.add_argument('--publish', '-p', action=PortAction)
+    _parser.add_argument('--volume', '-v', action=VolumeAction)
     _parser.add_argument('image')
 
     @classmethod
