@@ -26,11 +26,12 @@ class Parser:
             setattr(namespace, self.dest, volumes)
 
     _parser = ArgumentParser()
-    _parser.add_argument('--cap-drop', action='append')
-    _parser.add_argument('--cap-add', action='append')
+    _parser.add_argument('--name')
     _parser.add_argument('--env', '-e', action='append')
     _parser.add_argument('--publish', '-p', action=PortAction)
     _parser.add_argument('--volume', '-v', action=VolumeAction)
+    _parser.add_argument('--cap-drop', action='append')
+    _parser.add_argument('--cap-add', action='append')
     _parser.add_argument('image')
 
     @classmethod

@@ -9,7 +9,9 @@
 # trace kill -> update children pids
 # trace capable -> check if in pids and add cap to set
 import signal
+import sys
 import uuid
+from threading import Thread, Event
 
 import docker
 from bcc import BPF
@@ -26,7 +28,7 @@ container_name: str = f'{TRACED_CONTAINER_NAME_PREFIX}_{uuid.uuid4()}'
 client: docker.DockerClient = docker.from_env()
 
 parameters = {
-    'name': container_name,
+    'name': args.name,
     'image': args.image,
     'detach': True,
     'environment': args.env,
@@ -46,25 +48,6 @@ dropped_capabilities = Capabilities.from_strings(host_config['CapDrop'])
 
 capabilities = DEFAULT_CAPABILITIES.union(added_capabilities).difference(dropped_capabilities)
 
-
-def signal_handler(_signal_number, _frame):
-    clean_up()
-
-
-def clean_up():
-    print('Stopping container')
-    container.stop()
-    print('Stopped container')
-    print('Removing container')
-    container.remove()
-    print('Removed container')
-
-    exit()
-
-
-signal.signal(signal.SIGINT, signal_handler)
-signal.signal(signal.SIGINT, signal_handler)
-
 b = BPF(src_file='trace_capable.c')
 
 
@@ -76,8 +59,40 @@ def print_event(_core, data, _size):
 
 b["events"].open_perf_buffer(print_event)
 
-while True:
-    try:
+
+finished = Event()
+
+
+def poll_capable_kernel():
+    while not finished.is_set():
         b.perf_buffer_poll()
-    except KeyboardInterrupt:
-        clean_up()
+
+
+thread = Thread(None, poll_capable_kernel)
+thread.start()
+
+
+def clean_up():
+    finished.set()
+    thread.join()
+
+    print('Stopping container')
+    container.stop()
+    print('Stopped container')
+    print('Removing container')
+    container.remove()
+    print('Removed container')
+
+    sys.exit()
+
+
+def signal_handler(_signal_number, _frame):
+    print('signal_handler', _signal_number)
+    clean_up()
+
+
+signal.signal(signal.SIGINT, signal_handler)
+signal.signal(signal.SIGINT, signal_handler)
+
+container.wait()
+clean_up()
