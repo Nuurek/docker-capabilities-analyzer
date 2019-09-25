@@ -1,8 +1,8 @@
 from enum import IntEnum
-from typing import List, Set
+from typing import List, Set, Union
 
 
-class Capabilities(IntEnum):
+class Capability(IntEnum):
     CHOWN = 0
     DAC_OVERRIDE = 1
     DAC_READ_SEARCH = 2
@@ -43,23 +43,23 @@ class Capabilities(IntEnum):
     AUDIT_READ = 37
 
     @classmethod
-    def from_strings(cls, capabilities: List[str]) -> Set['Capabilities']:
-        return set([Capabilities[capability] for capability in capabilities])
+    def from_strings(cls, capabilities: Union[List[str], None]) -> Set['Capability']:
+        return set([Capability[capability] for capability in capabilities] if capabilities else [])
 
 
 DEFAULT_CAPABILITIES = {
-    Capabilities.SETPCAP,
-    Capabilities.MKNOD,
-    Capabilities.AUDIT_WRITE,
-    Capabilities.CHOWN,
-    Capabilities.NET_RAW,
-    Capabilities.DAC_OVERRIDE,
-    Capabilities.FOWNER,
-    Capabilities.FSETID,
-    Capabilities.KILL,
-    Capabilities.SETGID,
-    Capabilities.SETUID,
-    Capabilities.NET_BIND_SERVICE,
-    Capabilities.SYS_CHROOT,
-    Capabilities.SETFCAP
+    Capability.SETPCAP,
+    Capability.MKNOD,
+    Capability.AUDIT_WRITE,
+    Capability.CHOWN,
+    Capability.NET_RAW,
+    Capability.DAC_OVERRIDE,
+    Capability.FOWNER,
+    Capability.FSETID,
+    Capability.KILL,
+    Capability.SETGID,
+    Capability.SETUID,
+    Capability.NET_BIND_SERVICE,
+    Capability.SYS_CHROOT,
+    Capability.SETFCAP
 }

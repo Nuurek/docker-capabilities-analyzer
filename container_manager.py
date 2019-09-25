@@ -6,21 +6,28 @@ from docker.models.containers import Container
 
 
 class ContainerManager:
+    STATE_ATTRIBUTE_KEY = 'State'
+    PROCESS_ID_STATE_KEY = 'Pid'
+    HOST_CONFIG_ATTRIBUTE_KEY = 'HostConfig'
+
     _container: Container
 
     def __init__(self):
         self._client: docker.DockerClient = docker.from_env()
 
-    def run(self, args: Namespace):
+    def start(self, args: Namespace):
         parameters = self._get_parameters(args)
 
-        print('Running container')
+        print('Starting container')
         self._container: Container = self._client.containers.run(**parameters)
-        print('Ran container:', self._container.name)
+        print('Started container:', self._container.name)
 
         container_pid = self._wait_for_container_pid()
 
         return container_pid
+
+    def get_config(self) -> Dict:
+        return self._container.attrs[self.HOST_CONFIG_ATTRIBUTE_KEY]
 
     def wait(self):
         self._container.wait()
@@ -52,6 +59,6 @@ class ContainerManager:
         while not container_pid:
             print('Reloading container')
             self._container.reload()
-            container_pid = self._container.attrs['State']['Pid']
+            container_pid = self._container.attrs[self.STATE_ATTRIBUTE_KEY][self.PROCESS_ID_STATE_KEY]
 
         return container_pid

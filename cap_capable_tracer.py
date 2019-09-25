@@ -1,27 +1,29 @@
-from functools import partial
 from threading import Event, Thread
+from typing import Dict
 
 from bcc import BPF
 
-from capabilites import Capabilities
+from capabilities_manager import CapabilitiesManager
+from capability import Capability
 
 
 class CapCapableTracer:
     KERNEL_SOURCE = 'trace_cap_capable.c'
     CONTAINER_PID_MACRO = 'CONTAINER_PID'
-    # KERNEL_FUNCTION_NAME = 'trace_cap_capable'
-    # SYS_CALL_NAME = 'fork'
 
     _thread: Thread
     _finish_event: Event
 
-    def __init__(self, container_pid: int):
+    def __init__(self, container_pid: int, config: Dict):
+        self._capabilities_manager = CapabilitiesManager(config)
+
         with open(self.KERNEL_SOURCE, 'r') as file:
             source = file.read()
             define_macro = f'#define {self.CONTAINER_PID_MACRO} {container_pid}'
             source = define_macro + '\n' + source
 
         self._bpf = BPF(text=source)
+        print('Started tracing')
 
     def start(self):
         self._bpf['events'].open_perf_buffer(self._event_callback)
@@ -33,6 +35,7 @@ class CapCapableTracer:
     def stop(self):
         self._finish_event.set()
         self._thread.join()
+        self._capabilities_manager.print_report()
 
     def _trace_cap_capable(self):
         while not self._finish_event.is_set():
@@ -40,9 +43,5 @@ class CapCapableTracer:
 
     def _event_callback(self, _core, data, _size):
         event = self._bpf["events"].event(data)
-        # capability = Capabilities(event.cap)
-        # print('used', capability)
-        # tree = list(event.tree)
-        # if event.containerPID in tree:
-        #     print(event.cap, event.containerPID, tree)
-        print(event.cap, event.containerPID, list(event.tree))
+        capability = Capability(event.cap)
+        self._capabilities_manager.add_used_capability(capability)
