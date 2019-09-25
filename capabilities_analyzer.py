@@ -1,4 +1,4 @@
-from queue import Queue
+from queue import Queue, Empty
 from threading import Thread, Event
 from typing import Dict, Set, List
 
@@ -9,6 +9,7 @@ from capability_event import CapabilityEvent
 class CapabilitiesAnalyzer:
     CAP_ADD_CONFIG_KEY = 'CapAdd'
     CAP_DROP_CONFIG_KEY = 'CapDrop'
+    PRIVILEGED_CONFIG_KEY = 'Privileged'
     ALL_CAPABILITIES_KEY = 'ALL'
 
     _thread: Thread
@@ -34,8 +35,12 @@ class CapabilitiesAnalyzer:
         self._not_granted_capabilities: Set[Capability] = set()
 
     def _get_declared_capabilities(self, container_config: Dict) -> Set[Capability]:
-        added_capabilities_strings: List[str] = container_config[self.CAP_ADD_CONFIG_KEY]
-        dropped_capabilities_strings: List[str] = container_config[self.CAP_DROP_CONFIG_KEY]
+        is_privileged = container_config[self.PRIVILEGED_CONFIG_KEY]
+        if is_privileged:
+            return ALL_CAPABILITIES
+
+        added_capabilities_strings: List[str] = container_config[self.CAP_ADD_CONFIG_KEY] or []
+        dropped_capabilities_strings: List[str] = container_config[self.CAP_DROP_CONFIG_KEY] or []
 
         if (
             self.ALL_CAPABILITIES_KEY in added_capabilities_strings and
@@ -64,11 +69,13 @@ class CapabilitiesAnalyzer:
 
     def _consume_queue(self):
         while not self._finish_event.is_set() or not self._queue.empty():
-            event: CapabilityEvent = self._queue.get(timeout=1)
+            try:
+                event: CapabilityEvent = self._queue.get(timeout=1)
 
-            if event:
                 if self._container_pid in event.process_ids:
                     self._add_used_capability(event.capability, event.was_granted)
+            except Empty:
+                pass
 
     def _add_used_capability(self, capability: Capability, was_granted: bool) -> None:
         if was_granted:

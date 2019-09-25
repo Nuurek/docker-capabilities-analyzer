@@ -52,7 +52,8 @@ class ContainerManager:
             'ports': args.publish,
             'volumes': args.volume,
             'cap_add': args.cap_add,
-            'cap_drop': args.cap_drop
+            'cap_drop': args.cap_drop,
+            'privileged': bool(args.privileged)
         }
 
     def _wait_for_container_pid(self) -> int:

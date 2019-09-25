@@ -33,7 +33,12 @@ class Parser:
         self._parser.add_argument('--volume', '-v', action=self.VolumeAction)
         self._parser.add_argument('--cap-drop', action='append')
         self._parser.add_argument('--cap-add', action='append')
+        self._parser.add_argument('--privileged')
         self._parser.add_argument('image')
 
     def get_arguments(self) -> Namespace:
-        return self._parser.parse_args()
+        args = self._parser.parse_args()
+
+        args.privileged = args.privileged == 'true'
+
+        return args
