@@ -1,9 +1,9 @@
-from argparse import ArgumentParser, Action, Namespace
-from typing import Dict
+from argparse import ArgumentParser, Namespace, Action
+from typing import Dict, List
 
 
 class Parser:
-    class PortAction(Action):
+    class PublishAction(Action):
         def __call__(self, parser: ArgumentParser, namespace: Namespace, value: str, option_string: str = None):
             host_port, container_port = value.split(':')
             ports: Dict[str, str] = getattr(namespace, self.dest) or {}
@@ -25,15 +25,15 @@ class Parser:
             }
             setattr(namespace, self.dest, volumes)
 
-    _parser = ArgumentParser()
-    _parser.add_argument('--name')
-    _parser.add_argument('--env', '-e', action='append')
-    _parser.add_argument('--publish', '-p', action=PortAction)
-    _parser.add_argument('--volume', '-v', action=VolumeAction)
-    _parser.add_argument('--cap-drop', action='append')
-    _parser.add_argument('--cap-add', action='append')
-    _parser.add_argument('image')
+    def __init__(self):
+        self._parser = ArgumentParser()
+        self._parser.add_argument('--name')
+        self._parser.add_argument('--env', '-e', action='append')
+        self._parser.add_argument('--publish', '-p', action=self.PublishAction)
+        self._parser.add_argument('--volume', '-v', action=self.VolumeAction)
+        self._parser.add_argument('--cap-drop', action='append')
+        self._parser.add_argument('--cap-add', action='append')
+        self._parser.add_argument('image')
 
-    @classmethod
-    def get_arguments(cls):
-        return cls._parser.parse_args()
+    def get_arguments(self) -> Namespace:
+        return self._parser.parse_args()

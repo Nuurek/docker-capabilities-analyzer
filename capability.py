@@ -63,3 +63,5 @@ DEFAULT_CAPABILITIES = {
     Capability.SYS_CHROOT,
     Capability.SETFCAP
 }
+
+ALL_CAPABILITIES: Set[Capability] = set(Capability)

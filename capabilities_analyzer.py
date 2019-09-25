@@ -2,13 +2,14 @@ from queue import Queue
 from threading import Thread, Event
 from typing import Dict, Set, List
 
-from capability import Capability, DEFAULT_CAPABILITIES
+from capability import Capability, DEFAULT_CAPABILITIES, ALL_CAPABILITIES
 from capability_event import CapabilityEvent
 
 
 class CapabilitiesAnalyzer:
     CAP_ADD_CONFIG_KEY = 'CapAdd'
     CAP_DROP_CONFIG_KEY = 'CapDrop'
+    ALL_CAPABILITIES_KEY = 'ALL'
 
     _thread: Thread
     _finish_event: Event
@@ -28,14 +29,38 @@ class CapabilitiesAnalyzer:
         self._thread.join()
 
     def _initialize_capabilities_sets(self, container_config: Dict) -> None:
-        added_capabilities: List[Capability] = Capability.from_strings(container_config[self.CAP_ADD_CONFIG_KEY])
-        dropped_capabilities: List[Capability] = Capability.from_strings(container_config[self.CAP_DROP_CONFIG_KEY])
-
-        self._declared_capabilities: Set[Capability] = DEFAULT_CAPABILITIES \
-            .union(added_capabilities) \
-            .difference(dropped_capabilities)
+        self._declared_capabilities: Set[Capability] = self._get_declared_capabilities(container_config)
         self._granted_capabilities: Set[Capability] = set()
         self._not_granted_capabilities: Set[Capability] = set()
+
+    def _get_declared_capabilities(self, container_config: Dict) -> Set[Capability]:
+        added_capabilities_strings: List[str] = container_config[self.CAP_ADD_CONFIG_KEY]
+        dropped_capabilities_strings: List[str] = container_config[self.CAP_DROP_CONFIG_KEY]
+
+        if (
+            self.ALL_CAPABILITIES_KEY in added_capabilities_strings and
+            self.ALL_CAPABILITIES_KEY in dropped_capabilities_strings
+        ):
+            return set()
+        elif (
+            self.ALL_CAPABILITIES_KEY not in added_capabilities_strings and
+            self.ALL_CAPABILITIES_KEY in dropped_capabilities_strings
+        ):
+            return Capability.from_strings(added_capabilities_strings)
+        elif (
+            self.ALL_CAPABILITIES_KEY in added_capabilities_strings and
+            self.ALL_CAPABILITIES_KEY not in dropped_capabilities_strings
+        ):
+            dropped_capabilities = Capability.from_strings(dropped_capabilities_strings)
+
+            return ALL_CAPABILITIES.difference(dropped_capabilities)
+        else:
+            added_capabilities = Capability.from_strings(added_capabilities_strings)
+            dropped_capabilities = Capability.from_strings(dropped_capabilities_strings)
+
+            return DEFAULT_CAPABILITIES \
+                .union(added_capabilities) \
+                .difference(dropped_capabilities)
 
     def _consume_queue(self):
         while not self._finish_event.is_set() or not self._queue.empty():

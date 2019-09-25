@@ -7,7 +7,8 @@ from capabilities_tracer import CapabilitiesTracer
 from container_manager import ContainerManager
 from parser import Parser
 
-args = Parser.get_arguments()
+parser = Parser()
+args = parser.get_arguments()
 
 container_manager = ContainerManager()
 
