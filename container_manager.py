@@ -20,9 +20,9 @@ class ContainerManager:
 
         print('Starting container')
         self._container: Container = self._client.containers.run(**parameters)
-        print('Started container:', self._container.name)
 
         container_pid = self._wait_for_container_pid()
+        print('Started container:', self._container.name)
 
         return container_pid
 
@@ -59,7 +59,6 @@ class ContainerManager:
     def _wait_for_container_pid(self) -> int:
         container_pid = None
         while not container_pid:
-            print('Reloading container')
             self._container.reload()
             container_pid: int = self._container.attrs[self.STATE_ATTRIBUTE_KEY][self.PROCESS_ID_STATE_KEY]
 

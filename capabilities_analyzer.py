@@ -21,6 +21,7 @@ class CapabilitiesAnalyzer:
         self._initialize_capabilities_sets(container_config)
 
     def start(self) -> None:
+        # Consume the events' queue in a thread
         self._finish_event = Event()
         self._thread = Thread(None, self._consume_queue)
         self._thread.start()
