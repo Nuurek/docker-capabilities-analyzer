@@ -3,6 +3,7 @@ from threading import Thread, Event
 from typing import Dict, Set, List
 
 from capability import Capability, DEFAULT_CAPABILITIES
+from capability_event import CapabilityEvent
 
 
 class CapabilitiesAnalyzer:
@@ -38,11 +39,11 @@ class CapabilitiesAnalyzer:
 
     def _consume_queue(self):
         while not self._finish_event.is_set() or not self._queue.empty():
-            item = self._queue.get(timeout=1)
+            event: CapabilityEvent = self._queue.get(timeout=1)
 
-            if item:
-                if self._container_pid in item[2]:
-                    self._add_used_capability(item[0], item[1])
+            if event:
+                if self._container_pid in event.process_ids:
+                    self._add_used_capability(event.capability, event.was_granted)
 
     def _add_used_capability(self, capability: Capability, was_granted: bool) -> None:
         if was_granted:
