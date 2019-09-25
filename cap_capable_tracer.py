@@ -12,26 +12,26 @@ class CapCapableTracer:
     # KERNEL_FUNCTION_NAME = 'trace_cap_capable'
     # SYS_CALL_NAME = 'fork'
 
-    def __init__(self, container_pid: int, finish_event: Event):
-        self._finish_event = finish_event
+    _thread: Thread
+    _finish_event: Event
 
+    def __init__(self, container_pid: int):
         with open(self.KERNEL_SOURCE, 'r') as file:
             source = file.read()
-            define_macro = f'#define {self.CONTAINER_PID_MACRO} {container_pid}\n'
-            source = define_macro + source
+            define_macro = f'#define {self.CONTAINER_PID_MACRO} {container_pid}'
+            source = define_macro + '\n' + source
+
         self._bpf = BPF(text=source)
-        # sys_call_name = self._bpf.get_syscall_fnname(self.SYS_CALL_NAME)
-        # print(sys_call_name)
-        # self._bpf.attach_kprobe(event=sys_call_name, fn_name=self.KERNEL_FUNCTION_NAME)
-        self._thread: Thread = None
 
     def start(self):
         self._bpf['events'].open_perf_buffer(self._event_callback)
 
+        self._finish_event = Event()
         self._thread = Thread(None, self._trace_cap_capable)
         self._thread.start()
 
     def stop(self):
+        self._finish_event.set()
         self._thread.join()
 
     def _trace_cap_capable(self):
