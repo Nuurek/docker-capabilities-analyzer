@@ -31,5 +31,6 @@ def signal_handler(_signal_number, _frame):
 signal.signal(signal.SIGINT, signal_handler)
 signal.signal(signal.SIGINT, signal_handler)
 
-container_manager.wait()
+result = container_manager.wait()
+print('Container exited', result)
 clean_up()

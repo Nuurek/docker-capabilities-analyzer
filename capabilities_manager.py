@@ -14,30 +14,34 @@ class CapabilitiesManager:
         self._declared_capabilities: Set[Capability] = DEFAULT_CAPABILITIES \
             .union(added_capabilities) \
             .difference(dropped_capabilities)
-        self._used_capabilities: Set[Capability] = set()
+        self._granted_capabilities: Set[Capability] = set()
+        self._not_granted_capabilities: Set[Capability] = set()
 
-    def add_used_capability(self, capability: Capability) -> None:
-        self._used_capabilities.add(capability)
+    def add_used_capability(self, capability: Capability, was_granted: bool) -> None:
+        if was_granted:
+            self._granted_capabilities.add(capability)
+        else:
+            self._not_granted_capabilities.add(capability)
 
     def print_report(self):
         self._print_capabilities('Container declared capabilities', self._declared_capabilities)
 
-        self._print_capabilities('Container used capabilities', self._used_capabilities)
+        self._print_capabilities('Container granted capabilities', self._granted_capabilities)
 
-        over_permissioned_capabilities = self._declared_capabilities.difference(self._used_capabilities)
-        self._print_capabilities('Container declared but not used capabilities (over permissioning)',
+        over_permissioned_capabilities = self._declared_capabilities.difference(self._granted_capabilities)
+        self._print_capabilities('Container declared but not granted capabilities (over permissioning)',
                                  over_permissioned_capabilities)
 
-        under_permissioned_capabilities = self._used_capabilities.difference(self._declared_capabilities)
-        self._print_capabilities('Container used but not declared capabilities (over permissioning)',
-                                 under_permissioned_capabilities)
+        self._print_capabilities('Container not granted capabilities (under permissioning)',
+                                 self._not_granted_capabilities)
 
     @staticmethod
     def _print_capabilities(title: str, capabilities: Set[Capability]):
-        print('\n', f'{title}:\n')
+        if len(capabilities) > 0:
+            print('\n', f'{title}:\n')
 
-        sorted_capabilities = [capability.name for capability in list(capabilities)]
-        sorted_capabilities.sort()
+            sorted_capabilities = [capability.name for capability in list(capabilities)]
+            sorted_capabilities.sort()
 
-        for capability in sorted_capabilities:
-            print('\t', capability)
+            for capability in sorted_capabilities:
+                print('\t', capability)

@@ -31,6 +31,7 @@ class ContainerManager:
 
     def wait(self):
         self._container.wait()
+        return self._container.logs()
 
     def stop(self):
         print('Stopping container')

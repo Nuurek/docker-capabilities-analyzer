@@ -42,6 +42,8 @@ class CapCapableTracer:
             self._bpf.perf_buffer_poll(timeout=1)
 
     def _event_callback(self, _core, data, _size):
-        event = self._bpf["events"].event(data)
+        event = self._bpf['events'].event(data)
         capability = Capability(event.cap)
-        self._capabilities_manager.add_used_capability(capability)
+        was_granted = event.ret == 0
+        print(capability, was_granted)
+        self._capabilities_manager.add_used_capability(capability, was_granted)
