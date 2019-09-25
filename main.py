@@ -27,10 +27,9 @@ def main():
 
     def clean_up():
         container_manager.stop()
-
         capabilities_tracer.stop()
-
         capabilities_analyzer.stop()
+
         capabilities_analyzer.print_report()
 
         sys.exit()
@@ -41,8 +40,7 @@ def main():
     signal.signal(signal.SIGINT, signal_handler)
     signal.signal(signal.SIGINT, signal_handler)
 
-    logs = container_manager._container.logs(stream=True)
-    for log in logs:
+    for log in container_manager.logs():
         print(log.decode())
 
     print('Container exited')

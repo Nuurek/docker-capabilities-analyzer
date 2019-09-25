@@ -13,14 +13,16 @@ class ContainerManager:
     _container: Container
 
     def __init__(self):
+        # Use the environment configuration for Docker client
         self._client: docker.DockerClient = docker.from_env()
 
     def start(self, args: Namespace) -> int:
         parameters = self._get_parameters(args)
 
+        # Container will be created but not started instantly
+        # To actually read the container's process id client has to reload the object
         print('Starting container')
         self._container: Container = self._client.containers.run(**parameters)
-
         container_pid = self._wait_for_container_pid()
         print('Started container:', self._container.name)
 
@@ -29,9 +31,9 @@ class ContainerManager:
     def get_config(self) -> Dict:
         return self._container.attrs[self.HOST_CONFIG_ATTRIBUTE_KEY]
 
-    def wait(self):
-        self._container.wait()
-        return self._container.logs()
+    def logs(self):
+        # Return iterable with STDOUT and STDERR
+        return self._container.logs(stream=True)
 
     def stop(self):
         print('Stopping container')
@@ -57,6 +59,7 @@ class ContainerManager:
         }
 
     def _wait_for_container_pid(self) -> int:
+        # Reload the container object until it has its process id set
         container_pid = None
         while not container_pid:
             self._container.reload()

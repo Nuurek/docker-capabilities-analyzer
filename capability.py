@@ -2,6 +2,8 @@ from enum import IntEnum
 from typing import List, Set, Union
 
 
+# Capabilities taken directly from Linux kernel source
+# https://github.com/torvalds/linux/blob/master/include/uapi/linux/capability.h
 class Capability(IntEnum):
     CHOWN = 0
     DAC_OVERRIDE = 1
@@ -47,6 +49,8 @@ class Capability(IntEnum):
         return set([Capability[capability] for capability in capabilities] if capabilities else [])
 
 
+# Default container capabilities taken directly from Docker run reference:
+# https://docs.docker.com/engine/reference/run/
 DEFAULT_CAPABILITIES = {
     Capability.SETPCAP,
     Capability.MKNOD,
