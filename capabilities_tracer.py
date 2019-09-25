@@ -1,28 +1,21 @@
+from queue import Queue
 from threading import Event, Thread
-from typing import Dict
 
 from bcc import BPF
 
-from capabilities_manager import CapabilitiesManager
 from capability import Capability
 
 
-class CapCapableTracer:
+class CapabilitiesTracer:
     KERNEL_SOURCE = 'trace_cap_capable.c'
-    CONTAINER_PID_MACRO = 'CONTAINER_PID'
 
     _thread: Thread
     _finish_event: Event
 
-    def __init__(self, container_pid: int, config: Dict):
-        self._capabilities_manager = CapabilitiesManager(config)
+    def __init__(self, queue: Queue):
+        self._queue = queue
 
-        with open(self.KERNEL_SOURCE, 'r') as file:
-            source = file.read()
-            define_macro = f'#define {self.CONTAINER_PID_MACRO} {container_pid}'
-            source = define_macro + '\n' + source
-
-        self._bpf = BPF(text=source)
+        self._bpf = BPF(src_file=self.KERNEL_SOURCE)
         print('Started tracing')
 
     def start(self):
@@ -35,7 +28,6 @@ class CapCapableTracer:
     def stop(self):
         self._finish_event.set()
         self._thread.join()
-        self._capabilities_manager.print_report()
 
     def _trace_cap_capable(self):
         while not self._finish_event.is_set():
@@ -45,5 +37,5 @@ class CapCapableTracer:
         event = self._bpf['events'].event(data)
         capability = Capability(event.cap)
         was_granted = event.ret == 0
-        print(capability, was_granted)
-        self._capabilities_manager.add_used_capability(capability, was_granted)
+        item = [capability, was_granted, list(event.tree)]
+        self._queue.put(item)

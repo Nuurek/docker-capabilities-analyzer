@@ -1,7 +1,9 @@
 import signal
 import sys
+from queue import Queue
 
-from cap_capable_tracer import CapCapableTracer
+from capabilities_analyzer import CapabilitiesAnalyzer
+from capabilities_tracer import CapabilitiesTracer
 from container_manager import ContainerManager
 from parser import Parser
 
@@ -9,17 +11,25 @@ args = Parser.get_arguments()
 
 container_manager = ContainerManager()
 
-container_pid = container_manager.start(args)
-config = container_manager.get_config()
+events_queue = Queue()
 
-cap_capable_tracer = CapCapableTracer(container_pid, config)
-cap_capable_tracer.start()
+capabilities_tracer = CapabilitiesTracer(events_queue)
+capabilities_tracer.start()
+
+container_pid = container_manager.start(args)
+container_config = container_manager.get_config()
+
+capabilities_analyzer = CapabilitiesAnalyzer(events_queue, container_pid, container_config)
+capabilities_analyzer.start()
 
 
 def clean_up():
-    cap_capable_tracer.stop()
-
     container_manager.stop()
+
+    capabilities_tracer.stop()
+
+    capabilities_analyzer.stop()
+    capabilities_analyzer.print_report()
 
     sys.exit()
 

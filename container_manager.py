@@ -15,7 +15,7 @@ class ContainerManager:
     def __init__(self):
         self._client: docker.DockerClient = docker.from_env()
 
-    def start(self, args: Namespace):
+    def start(self, args: Namespace) -> int:
         parameters = self._get_parameters(args)
 
         print('Starting container')
@@ -55,11 +55,11 @@ class ContainerManager:
             'cap_drop': args.cap_drop
         }
 
-    def _wait_for_container_pid(self):
+    def _wait_for_container_pid(self) -> int:
         container_pid = None
         while not container_pid:
             print('Reloading container')
             self._container.reload()
-            container_pid = self._container.attrs[self.STATE_ATTRIBUTE_KEY][self.PROCESS_ID_STATE_KEY]
+            container_pid: int = self._container.attrs[self.STATE_ATTRIBUTE_KEY][self.PROCESS_ID_STATE_KEY]
 
         return container_pid
