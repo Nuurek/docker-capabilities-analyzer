@@ -2,3 +2,4 @@
 venv
 .idea
 bcc
+__pycache__
