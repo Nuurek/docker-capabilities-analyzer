@@ -1,0 +1,121 @@
+\chapter{Powszechne przypadki użycia Dockera}
+
+Większość dyskusji na temat bezpieczeństwa kontenerów porównuje je do maszyn wirtualnych, zakładając zatem, że obie technologie są równoważne pod względem projektowym. Chociaż równoważność z~maszynami wirtualnymi jest celem niektórych technologii kontenerowych (np.~OpenVZ), najnowsze "lekkie" rozwiązania kontenerowe, takie jak Docker, zostały zaprojektowane aby osiągnąć zupełnie inne cele niż te uzyskiwane przez maszyny wirtualne \cite{PetazzoniSSHDInDockerContainers}. Dlatego też, w~ramach pracy wyróżnione zostaną trzy przypadki użycia jako podłoże do analizy podatności Dockera.
+
+\section{Zalecany przypadek użycia}
+
+Twórcy Dockera zalecają podejście oparte na mikrousługach, co oznacza, że kontener musi obsługiwać pojedynczą usługę działającą w~jednym procesie lub demona tworzącego procesy-dzieci. Dlatego też, kontener Dockera nie jest traktowany jak maszyna wirtualna: nie posiada menedżera pakietów, procesu inicjującego ani demona SSH do zarządzania nim. Wszystkie zadania administracyjne (zatrzymanie kontenera, restart, tworzenie kopii zapasowych, aktualizacje, itd.) muszą być wykonywane za pośrednictwem gospodarza. Oznacza to, że administrator kontenera posiada dostęp na poziomie użytkownika \textit{root} do systemu gospodarza. Docker został zaprojektowany do izolowania aplikacji, które w~innym przypadku działałyby bezpośrednio w~systemie gospodarza, więc zakłada się, że wspomniane uprawnienia zostały przyznane. Izolacja procesów (przestrzenie nazw) i~zarządzanie zasobami (grupy kontrolne) sprawiają, że wdrażanie aplikacji Docker zapewnia większe bezpieczeństwo w~porównaniu z~nieużywaniem żadnej z technologii kontenerowych.
+
+Główną zaletą Dockera jest łatwość wdrażania aplikacji. Został zaprojektowany w~celu całkowitego oddzielenia płaszczyzny kodu od płaszczyzny danych. Obrazy Dockera można budować w~dowolnym miejscu za pomocą ogólnego pliku konfiguracyjnego (\textit{Dockerfile}), który określa kroki budowania obrazu z~obrazu podstawowego. Ten ogólny sposób budowania obrazów sprawia, że proces generowania obrazów i~powstałe obrazy są prawie niezależne od systemu gospodarza. Jądro systemu jest (zgodnie z~definicją) jedynym elementem, który może wpłynąć na proces generowania -- żadne oprogramowanie zainstalowane na systemie gospodarza nie powinno wpływać na tworzony obraz. Zgodnie z~oficjalnymi zaleceniami można wymienić sprawdzone w~produkcji przypadki użycia Dockera \cite{SulemanRealWorldWaysToUseDocker}:
+
+\begin{itemize}
+    \item uproszczenie konfiguracji
+    \item zarządzanie rurociągiem CI/CD
+    \item produktywność deweloperów
+    \item izolacja aplikacji
+    \item konsolidacja aplikacji
+    \item możliwości debugowania
+    \item architektura nastawiona na wielu najemców (multi-tenancy)
+    \item szybkie wdrożenia
+\end{itemize}
+
+\section{Rozpowszechniony przypadek użycia}
+
+Zgodnie z~raportem Forrester Consulting, jednym z~głównych powodów przyjęcia kontenerów jest zwiększenie wydajności programistów, a~nie faworyzowanie architektury mikrousług co byłoby zgodnie z~zalecanym przypadkiem użycia \cite{ForresterContainersRealAdoptionAndUseCases}. W~rzeczywistości dwa najbardziej popularne obrazy w~Docker Hub to Ubuntu i~CentOS czyli dwa obrazy kontenerów zorientowanych na bycie maszyną wirtualną \cite{DockerHubImages}. Niektórzy administratorzy lub programiści używają Dockera do wdrażania kompletnych środowisk wirtualnych i~ich regularnej aktualizacji, wykorzystując kontenery tak jakby były maszynami wirtualnymi. Ogranicza to zadania administracyjne systemu do absolutnego minimum (np.~\textit{docker pull}) i~tym samym jest wygodne dla użytkownika. Wprowadza jednak również kilka implikacji dla bezpieczeństwa systemu. 
+
+Po pierwsze, osadzenie większej ilości oprogramowania niż rozmiar dla którego zaprojektowano kontenery, zwiększa powierzchnię ataku obrazów kontenera. Nadmiarowe pakiety i~biblioteki mogą prowadzić do luk w~zabezpieczeniach, których w~przeciwnym wypadku można by uniknąć. Co więcej, obraz większych rozmiarów sprawia, że zarządzanie kontenerami jest bardziej złożone i~prowadzi do marnowania zasobów (np.~wymagana większa przepustowość sieci i~potrzebne miejsce do ich przechowywania, więcej procesów w~kontenerach). Kiedy kontenery zawierają wystarczająco dużo oprogramowania, aby uruchomić pełny system operacyjny (demon do tworzenia logów, demon SSH, a~czasem nawet proces inicjujący), kuszące jest wykonywanie zadań administracyjnych z~poziomu samego kontenera. Jest to całkowicie sprzeczne z~założonym projektem Dockera. Co więcej, niektóre z~zadań administracyjnych wymagają dostępu użytkownika \textit{root} do kontenera. Jeszcze inne czynności administracyjne (np.~montowanie dysków w~kontenerze) mogą wymagać dodatkowych uprawnień (\textit{capabilities}), które domyślnie są odebrane przez Dockera. Wszystkie powyższe działania mają tendencję do zwiększania powierzchni ataku. Aktywują większą ilość kanałów komunikacji pomiędzy gospodarzem, a~kontenerami oraz między samymi kontenerami, zwiększając ryzyko ataków, takich jak eskalacja uprawnień \cite{ColemanContainerAreNotVMs}.
+
+Dzięki przyspieszeniu cykli tworzenia oprogramowania, na które pozwala Docker, programiści nie są w~stanie utrzymywać każdej wersji swojego produktu i~wspierają najczęściej tylko tę najnowszą (tag \textit{latest} w~rejestrach Docker). W~rezultacie stare obrazy są nadal dostępne do pobrania, mimo tego, że nie były aktualizowane przez setki dni i~mogą prowadzić do luk w~zabezpieczeniach \cite{ShuStudyOfSecurityVulnerabilitiesOnDockerHub}. Badanie \cite{BanyanDockerHubHighPrioritySecurityVulnerabilities} wykazało, że ponad 30\% obrazów w~Docker Hub zawiera zagrożenia o~wysokim poziomie CVE (Common Vulnerabilities and Exposures), a~do 70\% zawiera zagrożenia o~wysokim lub średnim poziomie CVE.
+
+Warto zaznaczyć, że niektórych obrazów nie da się nawet całkowicie odtworzyć. Chociaż plik \textit{Dockerfile} jest publicznie dostępny w~Docker Hub to może zawierać instrukcję (np.~\textit{ADD start.sh}), która kopiuje skrypt startowy z~komputera twórcy obrazu do obrazu i~uruchamia go, a~skrypt jednocześnie nie pojawia się w~pliku \textit{Dockerfile}.
+
+\section{Przypadek użycia dostawców chmurowych}
+
+Najwięksi dostawcy usług chmury publicznej umożliwiają uruchomienie kontenerów Docker przy pomocy wielu, różnorodnych funkcji. Amazon AWS (Amazon Web Services), Microsoft Azure i~Google Cloud Platform nie są jedynymi dostawcami, jednak przodują oni w~świecie biznesu i~sumarycznie odpowiadają za prawie 60\% udziału w~rynku. Jednak to Amazon wiedzie prym w~dziedzinie usług chmurowych posiadając 47.8\% udziału w~rynku. Dokładne dane przestawia tabela~\ref{table:cloudProviders} \cite{GartnerPublicCloudServices}. 
+
+\begin{table}[ht]
+    \centering
+    \begin{tabular}{|l|c|}
+        \hline
+        \textbf{Firma} & \textbf{Udział (\%) w~2018r.} \\
+        \hline
+        Amazon & 47.8 \\
+        \hline
+        Microsoft & 15.5 \\
+        \hline
+        Alibaba & 7.7 \\
+        \hline
+        Google & 4.0 \\
+        \hline
+        IBM & 1.8 \\
+        \hline
+        Inne & 23.2 \\
+        \hline
+    \end{tabular}
+    \caption{Ogólnoświatowy udział w~rynku usług chmurowych IaaS \cite{GartnerPublicCloudServices}}
+    \label{table:cloudProviders}
+\end{table}
+
+Funkcjonalności dostarczane przez powyższych dostawców w~dziedzinie konteneryzacji różnią się od siebie, jednak posiadają pewne części bazowe, które są wspólne dla wszystkich z~nich. Architektura i~metoda działania zostanie opisana na bazie usług AWS, a~następnie wykazane zostaną podobieństwa i~różnice w~stosunku do pozostałych dwóch dostawców.
+
+\begin{table}[ht]
+    \centering
+    \resizebox{\textwidth}{!}{
+        \begin{tabular}{|c|c|c|}
+            \hline
+            \textbf{Amazon AWS} & \textbf{Microsoft Azure} & \textbf{Google Cloud Platform} \\
+            \hline
+            Elastic Cloud Computing & Azure Virtual Machine &  Compute Engine\\
+            \hline
+            Elastic Container Registry & Azure Container Registry &  Container Registry \\
+            \hline
+            Identity and Access Management & Azure Active Directory & Cloud Identity and Access Management \\
+            \hline
+            Elastic Container Service & Azure Container Instances & Google Kubernetes Engine \\
+            \hline
+        \end{tabular}
+    }
+    \caption{Podobieństwa w~usługach oferowanych przez dostawców chmurowych}
+    \label{table:cloudNames}
+\end{table}
+
+Amazon oferuje trzy usługi związane z~uruchamianiem kontenerów Docker. Pierwsza z~nich to AWS EC2 czyli Elastic Cloud Computing. Usługa ta pozwala użytkownikom tworzyć maszyny wirtualne, na których następnie należy samemu zainstalować oprogramowanie Docker aby ostatecznie móc uruchomić kontener. Rozwiązanie to w~niczym nie różni się od rozwiązań innych dostawców chmurowych czy nawet serwerownii oferujących hostowanie maszyn wirtualnych. Jednakże, z~racji uruchomienia maszyny w~ramach chmury AWS użytkownik otrzymuje dostęp do szeregu innych funkcjonalności oferowanych przez tego dostawcę. Tym samym, bez żadnej dodatkowej konfiguracji, maszyna wirtualna korzysta z~wbudowanych zabezpieczeń, takich jak: zapora sieciowa, sieć prywatna, automatyczne szyfrowanie ruchu pomiędzy usługami, ochrona przed atakami DoS, szyfrowanie danych, zarządzanie użytkownikami mającymi dostęp do zasobów, a~także ich kluczami oraz monitorowanie wszystkich zasobów. Z~punktu widzenia bezpieczeństwa Dockera rozwiązanie nie różni się niczym od uruchomienia Dockera na normalnej maszynie -- EC2 nie zapewnia profili AppArmor czy SELinux innych niż te domyślne, a~także zezwala na wszystkie opcje, które udostępnia Docker (zwiększanie uprawnień, współdzielenie przestrzeni nazw).
+
+Drugą usługą, raczej pomniejszą, jest AWS ECR czyli Elastic Container Registry. Amazon udostępnia własny rejestr obrazów Dockera działający na tej samej zasadzie co oficjalny Docker Hub. Ułatwia to pracę z~kontenerami w~ramach infrastruktury AWS, a~także odciąża programistów od tworzenia własnej infrastruktury przechowywania obrazów. Integracja z~AWS IAM (Identity and Access Management) zapewnia wysoce bezpieczną kontrolę nad przechowywanymi zasobami, która byłaby ciężka do osiągnięcia w~przypadku tworzenia rejestru od zera.
+
+ECS czyli Elastic Container Service skupia się tylko i~wyłącznie na kontenerach Dockera oraz tworzeniu z~nich klastrów. Usługa ta wykorzystuje wcześniej wspomniane maszyny wirtualne EC2, ukrywając jednocześnie przed użytkownikiem przedstawiony proces instalacji Dockera. Co więcej, ECS instaluje na każdej z~maszyn agenta ECS czyli orkiestratora pozwalającego na tworzenie klastrów kontenerów Docker. Użytkownik z~kolei, wykorzystując przygotowane przez siebie obrazy Dockera definiuje usługi (ang.~service) składające się z~zadań (ang.~task), które będa uruchomione w~ramach klastra. Dla każdej z~usług można zdefiniować statyczną liczbę maszyn wirtualnych i~zadań lub przygotować politykę dynamicznego skalowania usługi, która rozdzieli zadania pomiędzy maszyny wirtualne. Taka polityka pozwoli również na odpowiednie reagowanie na obciążenie usługi i~zgodnie z~zapotrzebowaniem będzie uruchamiać lub wyłączać dodatkowe maszyny wirtualne. Komunikacja pomiędzy użytkownikiem, a~demonem oraz demonem i~maszynami wirtualnymi odbywa się przy pomocy specjalnego interfesju programistycznego (opakowanego również w~interfejs linii poleceń i~interfejs graficzny), który korzysta tylko i~wyłącznie z~szyfrowanego połączenia. Za każdym razem gdy w~ramach klastra uruchamiana jest nowa maszyna wirtualna generuje się nowa para kluczy szyfrujących.
+
+Microsoft Azure nie oferuje żadnej usługi przeznaczonej bezpośrednio pod tworzenie klastrów kontenerów Dockera. Oficjalne dokumentacje proponują używanie usługi Azure AKS (Azure Kubernetes Service), która pozwala na zarządzanie środowiskami Kubernetes. Tym samym przypomina w~dużym stopniu Amazon ECS jednak nie współpracuje tylko i~wyłącznie z~kontenerami Dockera. 
+
+Kubernetes jest stworzonym przez Google systemem służącym do automatycznego wdrożenia, zarządzania i~skalowania aplikacji kontenerowych. Umożliwia automatyczne tworzenie klastra maszyn wirtualnych, na których instalowany i~konfigurowany jest Docker. Kontenery są pogrupowane w~pody (ang.~pods): zbiory kontenerów o~tej samej przestrzeni nazw Network (tym samym interfejsy sieciowe i~adresy IP) oraz opcjonalnie grupy kontrolne, co umożliwia bezpośrednią komunikację między nimi. Silnie sprzężone kontenery (wiele mikrousług tworzących tę samą aplikację) zwykle działają w~tym samym podzie. Pody są podstawową jednostką orkiestratora Kubernetes, podobnie jak maszyny wirtualne dla klasycznych infrastruktur chmurowych. Pody są automatycznie tworzone i~umieszczane na maszynach wirtualnych w~klastrze, zgodnie z~konfiguracją redundancji i~dostępności określoną przez kontrolery replikacji (ang.~replication controllers). Te kontrolery same są częścią usług: podmiotów, które definiują globalne parametry aplikacji (mapowanie portów zewnętrznych, itp.). Wszystkie węzły w~klastrze uruchamiają demona \textit{kubelet}, który kontroluje lokalnego demona Docker, a~centralny węzeł nadzoruje orkiestrację.
+
+Część poradników Microsoft Azure poleca również używanie oprogramowania Docker Swarm do tworzenia klastrów kontenerów Docker. Docker Swarm jest "natywnym" rozwiązaniem oprogramowania Docker pozwalającym na zarządzanie klastrem. Oferuje on podobne funkcjonalności do Kubernetes jednak z~racji swojego ścisłego powiązania z~architekturą Dockera pozwala dodatkowo na łatwe odkrywanie usług (ang.~service discovery) oraz aktualizację i~wersjonowanie kontenerów wewnątrz klastra. 
+
+Instancja Docker Swarm reprezentuje klaster węzłów (ang.~node), które mogą być maszynami fizycznymi lub wirtualnymi. Istnieją dwa typy węzłów: menedżer i~węzeł roboczy. Menedżerowie utrzymują stan klastra, a~węzły robocze są rzeczywistymi instancjami kontenerów. Gdy użytkownik wdraża usługę w~klastrze, menedżer klastra ma obowiązek zaplanować ją jako jedno lub więcej zadań uruchamianych niezależnie od siebie w~węzłach roboczych. Zadanie to atomowa jednostka planowania w~klastrze, która jest uruchamiania w~ramach kontenera. Docker Swarm zapewnia dwa typy wdrożeń dla usług: replikowane (ang.~replicated) i~globalne (ang.~global). Korzystając z~replikowanej usługi, użytkownik musi określić liczbę identycznych zadań, które chce uruchomić. Z~kolei, usługa globalna uruchamia jedno zadanie dla każdego węzła roboczego. Za każdym razem, gdy użytkownik dodaje nowy węzeł do klastra, orkiestrator tworzy zadanie, a~planista (ang.~scheduler) przypisuje zadanie do nowego węzła.
+
+Google Cloud Platform podobnie do Microsoft Azure nie implementuje własnego rozwiązania do tworzenia klastrów kontenerów Docker, zamiast czego proponuje używanie wyżej wspomnianych rozwiązań: Kubernetes i~Docker Swarm.
+
+Wymienieni wyżej dostawcy usług chmurowych posiadają podobną infrastrukturę (tabela~\ref{table:cloudNames}), a~ich podejścia do tworzenia klastrów i~orkiestratorzy mają odpowiadające sobie główne elementy (tabela~\ref{table:clusters}).
+
+\begin{table}[ht]
+    \centering
+    \begin{tabular}{|c|c|c|}
+        \hline
+        \textbf{Amazon ECS} & \textbf{Kubernetes} & \textbf{Docker Swarm} \\
+        \hline
+        Instancja EC2 & Węzeł & Węzeł \\
+        \hline
+        Agent ECS & kubelet & Menedżer \\
+        \hline
+        Zadanie & Pod & Zadanie \\
+        \hline
+        Usługa & Kontroler replikacji & \textit{brak} \\
+        \hline
+        Definicja zadania & Usługa & Usługa \\
+        \hline
+        Klaster & Klaster & Swarm \\
+        \hline
+    \end{tabular}
+    \caption{Odpowiadające sobie terminy w~Amazon ECS, Kubernetes i~Docker Swarm}
+    \label{table:clusters}
+\end{table}

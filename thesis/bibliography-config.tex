@@ -1,0 +1,22 @@
+\usepackage[language=polish,style=alphabetic,maxalphanames=1]{biblatex}
+\usepackage[chapter,numbib]{tocbibind}
+\addbibresource{references.bib}
+
+\DeclareLabelalphaTemplate{
+  \labelelement{
+    \field[uppercase,strwidth=4]{labelname}
+  }
+  \labelelement{
+    \literal{\addhighpenspace}
+  }
+  \labelelement{
+    \field{year}
+  }
+}
+
+\renewcommand\newblockpunct{, }
+\renewcommand\newunitpunct{}
+\renewcommand\labelalphaothers{}
+\renewcommand\multinamedelim{\addcomma\space}
+\DeclareFieldFormat{urldate}{[dostęp #1]}
+\DeclareFieldFormat{author}{\namepartfamily\space\namepartgiveni}

@@ -1,0 +1,88 @@
+\chapter{Architektura zabezpieczeń kontenerów Dockera}
+
+\section{Izolacja}
+
+Kontenery Dockera w~kwestii zabezpieczeń opierają się wyłącznie na funkcjach jądra systemu Linux, w~tym na przestrzeniach nazw, grupach kontrolnych, utwardzaniu jądra i~uprawnieniach (\textit{capabilities}). Izolacja przestrzeni nazw i~redukcja uprawnień są domyślnie włączone. Jednakże, ograniczenia grup kontrolnych muszą być skonfigurowane dla poszczególnych kontenerów poprzez opcje \textit{-{}-cgroup-parent} podczas uruchamiania kontenera. Domyślna konfiguracja izolacji jest stosunkowo ścisła. Jedyną wadą jest to, że wszystkie kontenery współużytkują ten sam most sieciowy, umożliwiając ataki typu \textit{ARP poisoning} między kontenerami na tym samym systemie operacyjnym gospodarza.
+
+Zabezpieczenia kontenera można obniżyć za pomocą opcji, podanych przy uruchomieniu kontenera, dając tym samym kontenerowi rozszerzony dostęp uprawnień do niektórych części gospodarza. Poniższe opcje pozwalają na zwiększenie uprawnień kontenera. Większość z~nich polega na wyłączeniu izolacji wynikającej z~systemu przestrzeni nazw:
+
+\begin{itemize}
+    \item -{}-cap-add=$<$CAP$>$ -- dodanie jednego z~uprawnień
+    \item -{}-privileged -- dostęp do wszystkich urządzeń gospodarza, jak i~konfiguracje AppArmor i~SELinux dające te same uprawnienia jakie mają procesy gospodarza
+    \item -{}-cgroup-parent=$<$parent$>$ -- dołączenie kontenera do określonej grupy kontrolnej
+    \item -{}-ipc=
+    \begin{itemize}
+        \item shareable -- prywatna przestrzeń nazw IPC, z~możliwością współdzielenia z~innymi kontenerami
+        \item container: $<$name or ID$>$ -- dołączenie do przestrzeni nazw IPC innego kontenera z~opcją \textit{shareable}
+        \item host -- użycie przestrzeni nazw IPC gospodarza
+    \end{itemize}
+    \item -{}-network=host -- użycie stosu sieciowego gospodarza
+    \item -{}-device=$<$host-device-path$>$:$<$container-device-path$>$ -- dostęp i~możliwość zamontowania określonego urządzenia
+    \item -{}-pid=
+    \begin{itemize}
+        \item container: $<$name or ID$>$ -- dołączenie do przestrzeni nazw PID innego kontenera
+        \item host -- użycie przestrzeni nazw PID gospodarza
+    \end{itemize}
+    \item -{}-uts=host -- użycie przestrzeni nazw UTS gospodarza
+\end{itemize}
+
+Opcje te umożliwiają kontenerom interakcje z~innymi kontenerami lub systemem gospodarza w~zamian za wprowadzenie ewentualnych luk w~zabezpieczeniach. Na przykład, opcja \textit{-{}-net=host} powoduje, że Docker nie umieszcza kontenera w~osobnej przestrzeni nazw Network, a~zatem daje kontenerowi pełny dostęp do stosu sieciowego hosta (umożliwiając rekonfigurację, \textit{network sniffing}, itp.).
+
+Zabezpieczenia można dodatkowo konfigurować globalnie za pomocą opcji przekazywanych do demona Docker. Obejmuje to opcje obniżające bezpieczeństwo, takie jak opcja \textit{-{}-insecure-register}, wyłączająca sprawdzanie certyfikatu TLS dla danego rejestru. Z~drugiej strony, dostępne są opcje zwiększające bezpieczeństwo, takie jak opcja \textit{-{}-icc=false}, która zabrania komunikacji sieciowej pomiędzy kontenerami i~zmniejsza szanse na opisane wcześniej ataki typu \textit{ARP poisoning}. Uniemożliwa jednak ona prawidłowe działanie aplikacji wielokontenerowych, dlatego też jest rzadko używana \cite{DockerRunReference}.
+
+\section{Utwardzanie jądra systemu operacyjnego gospodarza}
+
+Utwardzanie jądra za pomocą modułów bezpieczeństwa Linux to sposób na egzekwowanie ograniczeń związanych z~bezpieczeństwem. Takie dodatkowe zabezpieczenia mogą być przydatne w~momecie przeniknięcia złośliwego oprogramowania do kontenera i~eskalacji (ucieczki) do systemu operacyjnego gospodarza. Obecnie obsługiwane są AppArmor, SELinux (tylko i~wyłącznie dla dystrybucji RedHat), Seccomp i~GRSEC z~dostępnymi profilami domyślnymi. Profile te są bardzo ogólne, dlatego też domyślne utwardzanie chroni gospodarza przed kontenerami, ale nie kontenerów przed innymi kontenerami. Rozwiązanie tego problemu leży po stronie programistów, którzy muszą sami określać profile/polityki w~zależności od indywidualnych zapotrzebowań systemu \cite{MobyDockerDefaultAppArmorProfile}\cite{MillerSecuringYourContainers}.
+
+W celu użycia dodatkowej polityki bezpieczeństwa w~ramach kontenera należy w~trakcie jego uruchomienia przekazać odpowiedni argument wraz z~opcją \textit{-{}-security-opt}. Taka możliwość istnieje w~Dockerze od wersji 1.3 (październik 2013) co pokazuje, że wsparcie dla dodatkowego zabezpieczenia kontenerów istniało prawie od początku projektu Docker. W~późniejszych latach zabrakło wewnętrznego rozwoju tego typu rozwiązań i~obecny stan niewiele różni się od tego sprzed kilku lat.
+
+\subsection{SELinux}
+
+SELinux został pierwotnie opracowany przez Narodową Agencję Bezpieczeństwa Stanów Zjednoczonych i~implementuje system obowiązkowej kontroli dostępu (ang.~MAC,~Mandatory Access Control). Decyzje dotyczące kontroli dostępu są podejmowane na podstawie kontekstu bezpieczeństwa przypisanego do zasobów, łącząc kontrolę dostępu opartą na rolach (ang.~Role Base Access Control), wymuszanie typów kontroli (ang.~Type Enforcement) oraz zabezpieczenia wielopoziomowe (ang.~Multi Lever Security). Reguły określają domenę, z~którą program jest powiązany, i~definiują, w~jaki sposób procesy w~poszczególnych domenach mogą uzyskiwać dostęp do zasobów oznaczonych określonymi typami. Reguły SELinuxa mogą być bardzo złożone i~są zdefiniowane w~postaci kontekstów bezpieczeństwa, które są stosowane jako etykiety zasobów \cite{SchreudersEmpoweringEndUsersToConfineTheirOwnApplications}.
+
+Przestrzenie nazw nie wpływają na kontrolę dostępu SELinuxa, co oznacza, że istnieje tylko jeden zbiór zasad dla wszystkich kontenerów Dockera w~systemie. Opcja \textit{-{}-security-opt} pozwala na określenie etykiety użytkownika oraz roli i~typu etykiety:
+
+\begin{itemize}
+    \item \textit{-{}-security-opt=label:user:$<$USER$>$}
+    \item \textit{-{}-security-opt=label:role:$<$ROLE$>$}
+    \item \textit{-{}-security-opt=label:type:$<$TYPE$>$}
+\end{itemize}
+
+Dystrybucja Linuxa o~nazwie RedHat jako jedna z~niewielu dostarcza domyślną politykę SELinuxa dla Dockera. Bazuje ona na polityce przygotowanej dla maszyn wirtualnych \textit{libvirt}. Specjalna etykieta \textit{svirt_sandbox_file_t} pozwala na dodanie kontenerom uprawnień do danego zasobu. Polityka definiuje wiele reguł zwiększających bezpieczeństwo systemu gospodarza i~kontenerów poprzez ograniczenie kontenerom uprawnień takich jak \cite{RedHatContainerSecurityGuide}:
+
+\begin{itemize}
+    \item zapis do katalogów innych niż \textit{/etc} i~\textit{/usr}
+    \item dostęp do portów TCP
+    \item zapis do plików typu \textit{corefile}
+    \item odczyt i~zapis do powłok systemowych
+    \item nasłuchiwanie na wywołania systemowe procesów
+    \item dynamiczne ładowanie modułów jądra
+    \item odczyt systemowego generatora liczb losowych
+    \item korzystanie z~pamięci współdzielonej
+\end{itemize}
+
+Warto zaznaczyć, że tworzenie i~modyfikacja polityk SELinuxa wymaga wiedzy dziedzionwej z~zakresu bezpieczeństwa systemów operacyjnych i~dla większości programistów pracujących z~Dockerem będzie wyzwaniem. Twórcy Dockera nie ułatwiają w~żaden sposób tworzenia takich polityk chociażby poprzez dostarczanie domyślnych polityk dla popularniejszych systemów operacyjnych. Muszą tym zajmować się sami twórcy dystrbucji (np. Red Hat, Inc.).
+
+\subsection{AppArmor}
+
+AppArmor również implementuje system obowiązkowej kontroli dostępu jednakże używa prostszego modelu niż SELinux. AppArmor pozwala na zdefiniowanie profilu dla każdego z~ograniczanych programów z~listą uprawnień do zasobów. Proste abstrakcje takie jak \textit{dbus}, \textit{kde} lub \textit{nameservice} pozwalają na grupowanie niskopoziomowych cech programu w~celu zdefiniowania profilu. Istnieje wiele programów z~interfejsem graficznym ułatwiających generowanie profili. Profile AppArmor mogą być długie i~szczegółowe odzwierciedlając złożoność aplikacji i~różnorodność dystrybucji, na których ma być uruchamiony program. Narzędzie to jest przedstawiane przez twórców, Canonical Ltd., jako prostsza alternatywa w~stosunku do SELinuxa \cite{SchreudersEmpoweringEndUsersToConfineTheirOwnApplications}.
+
+Profile AppArmor oddziałują na poszczególne kontenery, a~nie demona Dockera co pozwala na definiowane osobnych profili dla każdego kontenera. Opcja \textit{-{}-security-opt=$<$PROFILE$>$} pozwala na określenie nazwy profilu, który ma zostać użyty w~momencie uruchomienia kontenera. Domyślny profil dostarczany przez Dockera definiuje następujące reguły \cite{MobyDockerDefaultAppArmorProfile}:
+
+\begin{itemize}
+    \item pozwala na zabicie kontenera przez demona Dockera
+    \item pozwala na wysyłanie sygnałów pomiędzy kontenerami
+    \item blokuje zapis do większości plików i~podkatalogów w~katalogu \textit{/proc}, z~wyróżniającym się wyjątkiem \textit{/proc/sys/kernel}
+    \item blokuje montowanie woluminów danych
+    \item blokuje nasłuchiwanie na wywołania systemowe procesów
+\end{itemize}
+
+Istnieje również narzędzie \textit{bane}, które pozwala na definiowanie profili przygotowanych bezpośrednio pod kontenery Dockera w~prostszym formacie plików TOML. Narzędzie automatycznie transformuje zdefiniowaną konfigurację w~profil AppArmor, zapisuje go na dysku oraz wykonuje obowiązkowe parsowanie przy użyciu \textit{apparmor_parser}. Znacznie ułatwię to pracę z~tworzeniem profili dla kontenerów aplikacyjnych \cite{BaneRepository}.
+
+\section{Wykorzystanie mechanizmów kryptograficznych}
+
+Obrazy Dockera pobrane ze zdalnego rejestru są weryfikowane za pomocą funkcji skrótu, zaś połączenie z~rejestrem jest nawiązywane poprzez TLS (chyba, że wymuszono połączenie niezabezpieczone). Ponadto, począwszy od wersji 1.8 wydanej w~sierpniu 2015r., architektura Docker Content Trust pozwala deweloperom podpisywać swoje obrazy przed opublikowaniem ich do rejestru. 
+
+Content Trust opiera się na The Update Framework. Jest to framework zaprojektowany w~celu usunięcia wad menedżera pakietów. Może odratować system po przejęciu klucza (key compromise) i~złagodzić ataki typu \textit{replay attack} poprzez osadzenie wygasających znaczników czasowych w~podpisanych obrazach. Jego wadą jest jednak złożone zarządzanie kluczami. W~rzeczywistości implementuje infrastrukturę klucza publicznego, w~której każdy programista jest właścicielem klucza głównego ("offline key"), używanego do podpisywania ("signing keys") obrazów Docker. Klucze do podpisywania są współużytkowane przez każdy podmiot, który chce opublikować obraz. Należy w~to również włączyć automatyzowanie podpisów w~rurociągach CI/CD co powoduje dostęp do kluczy przez podmioty zewnętrzne. Problemem jest także dystrybucja (licznych) kluczy głównych \cite{SamuelSurvivableKeyCompromiseInSoftwareUpdateSystems}\cite{CapposAttacksOnPackageManagers}.
+
+Demon Dockera jest zdalnie sterowany poprzez gniazdo. Domyślnym gniazdem używanym do sterowania demonem jest gniazdo unixowe, zlokalizowane w~\textit{/var/run/docker.sock} i~należące do \textit{root:docker}. Dostęp do tego gniazda umożliwia pobieranie i~uruchamianie dowolnego kontenera w~trybie uprzywilejowanym, zapewniając w~ten sposób dostęp użytkownika \textit{root} do systemu gospodarza. W~przypadku gniazda unixowego członek grupy \textit{docker} może uzyskać uprawnienia użytkownika \textit{root}. W~przypadku gniazda TCP dowolne połączenie z~tym gniazdem pozwala na korzystanie z~uprawnień użytkownika \textit{root}. Dlatego też, połączenie musi być zabezpieczone przy pomocy TLS (\textit{-{}-tlsverify}). Umożliwia to zarówno szyfrowanie, jak i~uwierzytelnianie dwóch stron połączenia, jednak dodaje problem zarządzania dodatkowymi certyfikatami. Warto zaznaczyć, że opcja \textit{-{}-tlsverify} jest domyślnie wyłączona.

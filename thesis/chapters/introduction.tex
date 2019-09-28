@@ -1,0 +1,17 @@
+\chapter{Wstęp}
+
+\section{Wirtualizacja środowiska przetwarzania}
+
+W ostatnich dwóch dekadach nastąpił gwałtowany rozwój obszaru technologii wirtualizacji, które umożliwiają partycjonowanie fizycznego systemu komputerowego w~wiele odizolowanych środowisk wirtualnych. Istniejące technologie wirtualizacji oferują znaczne korzyści szybko napędzające ich rozwój. Jednym z~najbardziej powszechnych powodów stosowania wirtualizacji jest tworzenie chmurowych centrów obliczeniowych, z~którymi na co dzień styczność ma wielu programistów. Amazon AWS, Microsoft Azure czy Google Cloud Platform to tylko niektórzy z~popularnych dostawców chmurowych wykorzystujących wirtualizację.
+
+Rosnące wykorzystanie wirtualizacji stworzyło zapotrzebowanie na technologie, które zapewnią wydajne, skalowalne i~bezpieczne środowiska serwerowe. W~przeciągu poprzednich lat pojawiło się wiele rozwiązań, które mogą być zakwalifikowane do jednej z~dwóch głównych kategorii: wirtualizacji bazującej na konteneryzacji i~wirtualizacji bazującej na nadzorcy. Potrzeba coraz krótszych cykli rozwoju oprogramowania, ciągłych aktualizacji oraz zmniejszania kosztów w~infrastrukturach bazującacych na chmurze obliczeniowej spowodowała, że z~tych dwóch kategorii to wirtualizacje bazujące na kontenerach zyskały ogromną popularność. Oferują one większą elastyczność niż maszyny wirtualne oraz wydajność zbliżoną do natywnie uruchumionego systemu operacyjnego. 
+
+Docker jest obecnie najpopularniejszym na rynku rozwiązaniem spośród wszystkich mechanizmów kontenerowych. W~szczególności, Docker jest kompletnym narzędziem pozwalającym na konteneryzację i~dostarczanie oprogramowania. Łączy on pojęcie wirtualizacji systemu operacyjnego z~tematami przenośności oprogramowania, modularyzacji systemu oraz wersjonowania. Tym samym idealnie wpisuje się w~obecnie popularną "filozofię" tworzenia oprogramowania DevOps. Jednakże, wirtualizacja oparta na kontenerach posiada również wady, a~istotna część z~nich dotyczy bezpieczeństwa tych rozwiązań.
+
+\section{Cel i zakres pracy}
+
+Celem pracy jest analiza rozwiązań wirtualizacji systemów operacyjnych z naciskiem na aspekt bezpieczeństwa przy wykorzystaniu środowiska wirtualizacji Docker. Zwieńczeniem analizy jest projekt i implementacja aplikacji wspomagającej zautomatyzowaną analizę kontenerów Docker pod kątem wykrywania przydziału zbyt dużej ilości uprawnień danemu obrazowi kontenera Docker. Stworzenie takiej aplikacji motywowane jest brakiem odpowiednich rozwiązań dostępnych na rynku, pomimo tak dużej popularności środowiska Docker oraz krytycznego znaczenia prawidłowego przydziału uprawnień w zarządzaniu bezpieczeństwem.
+
+\section{Struktura pracy}
+
+TODO
