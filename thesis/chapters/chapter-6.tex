@@ -1,10 +1,32 @@
 \chapter{Realizacja aplikacji}
 
-Background. Cel
+Analiza podatności pokazała, że większość wektorów ataku na ekosystem Dockera pochodzi z błędów konfiguracji demona i kontenerów Dockera, a także z błędów ludzkich związanych z wielousługową metodą wdrażana oprogramowania. Ogromne wsparcie od twórców Dockera pozwala na szybkie łatanie podatności środowiska. Jednakże aplikowanie aktualizacji bezpieczeństwa nadal jest zależne od użytkownika końcowego.
+
+Błędy konfiguracyjne mogą pojawić się na wielu etapach pracy z ekosystemem Dockera. Pomijając zewnętrzne zależności można wyróżnić takie elementy środowiska jak pliki konfiguracyjne demona Dockera, uprawnienia powiązanych z nim plików i katalogów systemu gospodarza oraz opcje przekazane przez użytkownika w trakcie uruchomienia demona. Ponadto, konfiguracja kontenerów jest podatna na błędy wynikające z wykorzystania nieodpowiednich dyrektyw w plikach Dockerfile lub opcji użytych w trakcie uruchamiania kontenerów. Polityka bezpieczeństwa powinna brać pod uwagę scenariusz w jakim jest aplikowana i być odpowiednio dostosowywana w celu osiągnięcia zamierzonych celów.
+
+Popularność Dockera dała wielu programistu dostęp do bardzo złożonego narzędzia jakim są kontenery. Jednakże, nie każdy użytkownik Dockera jest specjalistą od spraw bezpieczeństwa systemów komputerowych. Wiąże się to z tworzeniem podatności wynikających z nieznajomości pewnych aspektów wykorzystywanej technologii. Celem twórców wszystkich elementów ekosystemu Dockera powinno być wsparcie użytkowników w kwestiach zwiększania bezpieczeństwa tworzonych przez nich aplikacji kontenerowych. 
+
+Wspomniany w poprzednich rozdziałach Docker Benchmark \cite{CISDockerBenchmark} został przeanalizowany przez twórców Dockera w celu stworzenia narzędzia weryfikującego wykorzystanie zalecanych dobrych praktyk. Wynikiem tej pracy jest implementacja skryptu [TODO]. W sposób statyczny analizuje on konfigurację demona i kontenerów Dockera sprawdzając spełnienie zaleceń oznaczonych w Docker Benchmark jako "Scored" (88/115 wszystkich zaleceń).
+
+W ramach pracy zaprojektowano aplikację wspomagającą zautomatyzowaną analizę kontenerów Docker pod kątem wykrywania przydziału zbyt dużej ilości uprawnień. W porównaniu do skryptu [TODO] aplikacja analizuje wykorzystanie uprawnień w trakcie działania kontenera. Wynikiem uruchomienia aplikacji jest raport przedstawiający porównanie zadeklarowanych w konfiguracji uprawnień kontenera z rzeczywiście użytymi. Tym samym, daje użytkownikowi możliwości zmniejszenia wektora ataku, którym są nadmiarowe uprawnienia. W kolejnych podrozdziałach aplikacja jest zwana również analizatorem.
+
+\section{Wykorzystane narzędzia}
+
+\subsection{Berkeley Packet Filter}
+
+\subsection{extended Berkeley Packet Filter}
+
+\subsection{BPF Compiler Collection}
+
+Berkeley Packet Filter Compiler Collection, w skrócie BCC, jest zbiorem narzędzi pozwalających na tworzenie programów śledzących i manipulujących wykorzystanie jądra Linuxa. BCC w znacznym stopniu ułatwia pisanie programów wykorzystujących BPF poprzez opakowanie kodu bajtowego BPF wewnątrz programów napisanych w języku C oraz udostępnienie interfejsów programistycznych w językach Lua i Python. Dodatkowo, repozytorium BCC zawiera dużą ilość przykładów i wbudowanych narzędzi (ponad 150) ułatwiających nowym programistom rozpoczęcie tworzenia własnych programów.
+
+BCC dodatkowo analizuje kod programów napisanych w C dzięki czemu gwarantuje, że kod bajtowy będzie działał poprawnie. To narzędzie ma na celu zapewnienie interfejsu, który pozwali na tworzenie tylko i wyłącznie poprawnych programów BPF, zachowując równocześnie dostęp do wszystkich funkcjonalności. Ponadto, minimalizuje czas spędzony na przygotowaniu i kompilacji kod bajtowego BPF, umożliwiając skupienie się na tworzeniu docelowej aplikacji \cite{BCCReadme}.
+
+\subsection{Python3.7}
+
+\subsection{Docker SDK for Python}
 
 \section{Schemat działania}
-
-Ogólny opis działania
 
 \section{Implementacja analizy w trakcie działania kontenera}
 
