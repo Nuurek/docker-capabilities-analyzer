@@ -19,9 +19,6 @@
 \geometry{a4paper,left=25mm,right=25mm,top=25mm,bottom=25mm}
 
 \pagenumbering{arabic}
-\makeatletter
-\patchcmd{\chapter}{\if@openright\cleardoublepage\else\clearpage\fi}{}{}{}
-\makeatother
 
 \titleformat{\chapter}[block]
   {\normalfont\fontsize{16}{16}\bfseries}{\thechapter.}{0.4cm}{}

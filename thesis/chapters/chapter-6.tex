@@ -1,4 +1,4 @@
-\chapter{Realizacja aplikacji}
+\chapter{Aplikacja}
 
 \section{Motywacja}
 
@@ -39,7 +39,7 @@ Berkeley Packet Filter Compiler Collection, w~skrócie BCC, w~znacznym stopniu u
 
 BCC dodatkowo analizuje kod programów napisanych w~C++ dzięki czemu gwarantuje, że końcowy kod bajtowy BPF będzie poprawny. To narzędzie ma na celu zapewnienie interfejsu, który pozwoli na tworzenie tylko i~wyłącznie poprawnych programów eBPF, zachowując równocześnie dostęp do wszystkich funkcjonalności. Ponadto, minimalizuje czas spędzony na przygotowaniu i~kompilacji kodu bajtowego BPF. Umożliwia tym samym skupienie się na tworzeniu docelowej aplikacji \cite{BCCReadme}.
 
-\subsection{Python3.7}
+\subsection{Python 3.7}
 
 Python jest interpretowanym językiem programowania wysokiego poziomu z~dynamiczną semantyką. Wbudowane wysokopoziomowe struktury w~połączeniu z~dynamicznym typowaniem i~wiązaniem czynią go idealnym kandydatem do szybkiego rozwoju oprogramowania, a~także tworzenia skryptów oraz łączenia istnięjących komponentów większego systemu \cite{PythonExecutiveSummary}.
 
@@ -126,7 +126,7 @@ Analiza wywołań systemowych również odbywa się w~osobnym wątku, który jes
 
 Program analizatora kończy się w~momencie zakończenia pracy kontenera bądź wymuszenia zakończenia przez użytkownika. Jeśli to użytkownik wymusił zakończenie programu kontener zostaje zastopowany. Główny wątek analizatora nastepnie wysyła sygnał do wątków wewnątrz obiektów klas \textit{CapabilitiesTracer} i~\textit{CapabilitiesAnalyzer} aby zakończyły działanie. Obiekt klasy \textit{CapabilitiesTracer} kończy śledzenie wywołań systemowych natychmiastowo, zaś obiekt klasy \textit{CapabilitiesAnalyzer} najpierw odczytuje i~analizuje wszystkie zdarzenia pozostałe w~kolejce, a~następnie wyświetla raport dotyczący uprawnień.
 
-Raport bazuje na opcjach wpływająych na uprawnienia, przekazanych do kontenera w~trakcie uruchomienia analizatora:
+Raport bazuje na opcjach zmieniających uprawnienia, przekazanych do kontenera w~trakcie uruchomienia analizatora:
 \begin{itemize}
     \item \textit{-{}-cap-add}
     \item \textit{-{}-cap-drop}
